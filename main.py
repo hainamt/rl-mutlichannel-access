@@ -6,7 +6,7 @@ import copy
 
 
 # policy
-def select_action(timestep:int, current_channel_index:int):
+def select_action(timestep:int, current_channel_index:int, epsilon:float=0.1):
     random_float = random.random()
     if random_float <= epsilon:
         action = random.choice(q_table.get_all_actions_of_state(timestep, current_channel_index))
@@ -28,7 +28,12 @@ def step(timestep: int, current_channel: Channel, action: Action):
 def run_q_learning(num_episodes:int,
                    q_table:QTable,
                    gamma:float,
-                   learning_rate:float,
+                   initial_epsilon:float,
+                   min_epsilon:float,
+                   epsilon_decay:float,
+                   initial_learning_rate:float,
+                   min_learning_rate:float,
+                   learning_rate_decay:float,
                    checkpoints:list[int]):
     q_history = []
     delta_q = dict()
@@ -36,9 +41,11 @@ def run_q_learning(num_episodes:int,
 
     for i in tqdm(range(num_episodes)):
         current_channel = Channel(7)
-        
+        epsilon = max(min_epsilon, initial_epsilon * (epsilon_decay ** i))
+        learning_rate = max(min_learning_rate, initial_learning_rate * (learning_rate_decay ** i))
+
         for timestep, channels in enumerate(env):
-            chosen_action = select_action(timestep, current_channel.channel_index)
+            chosen_action = select_action(timestep, current_channel.channel_index, epsilon=epsilon)
             
             next_channel, reward = step(timestep, current_channel, chosen_action)
 
@@ -69,8 +76,14 @@ def run_q_learning(num_episodes:int,
 if __name__ == '__main__':
     # state (t, c)
     # action (a)
-    epsilon = 0.2
-    learning_rate = 0.1
+    initial_epsilon = 1.0
+    min_epsilon = 0.01
+    epsilon_decay = 0.995
+
+    initial_learning_rate = 0.1
+    min_learning_rate = 0.01
+    learning_rate_decay = 0.99
+
     gamma = 0.99
     time_length = len(env)
     num_channels = len(env[0])
@@ -81,4 +94,8 @@ if __name__ == '__main__':
     num_episodes = 10000
     checkpoints = [int(num_episodes * 0.25), int(num_episodes * 0.5), num_episodes - 1]
 
-    q_history, delta_q = run_q_learning(num_episodes, q_table, gamma, learning_rate, checkpoints)
+    q_history, delta_q = run_q_learning(num_episodes, q_table,
+                                        gamma,
+                                        initial_epsilon, min_epsilon, epsilon_decay,
+                                        initial_learning_rate, min_learning_rate, learning_rate_decay,
+                                        checkpoints)
