@@ -1,5 +1,6 @@
 from itertools import product
 from environment import *
+import random
 
 class QTable(dict):
     def __init__(self, time_length, num_channels):
@@ -55,7 +56,9 @@ class QTable(dict):
 
     def get_best_action(self, timestep, channel_index):
         state_actions = self[timestep, channel_index]
-        return max(state_actions.keys(), key=lambda a: state_actions[a])
+        max_value = max(state_actions.values())
+        best_actions = [action for action, value in state_actions.items() if value == max_value]
+        return random.choice(best_actions)
 
     def get_best_q_value(self, timestep, channel_index):
         return max(self[timestep, channel_index].values())
