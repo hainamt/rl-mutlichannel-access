@@ -17,7 +17,7 @@ class QTable(dict):
         states = list(product(timesteps, self.channel_objects))
 
         for state in states:
-            timestep, current_channel = state
+            _, current_channel = state
             actions = [Action(ActionType.SWITCH, channel_index=i)
                        for i in range(self.num_channels)
                        if i != current_channel.channel_index] + \
