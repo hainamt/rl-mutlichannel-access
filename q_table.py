@@ -29,7 +29,7 @@ class QTable(dict):
         if isinstance(key, tuple) and len(key) == 2:
             t, c = key
             if isinstance(c, int) and c in self.channel_map:
-                return t, self.channel_map[c]
+                return t, self.channel_map[c]  # Make sure to return a tuple, not a list
         return key
 
     def __getitem__(self, key):

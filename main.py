@@ -35,7 +35,7 @@ def run_q_learning(num_episodes:int,
 
     for i in tqdm(range(num_episodes)):
         current_channel = Channel(7)
-        for timestep in tqdm(env):
+        for timestep, channels in enumerate(env):
             chosen_action = select_action(timestep, current_channel.channel_index)
             next_channel, reward = step(timestep, current_channel, chosen_action)
 
@@ -73,5 +73,7 @@ if __name__ == '__main__':
     checkpoints = [int(num_episodes * 0.25), int(num_episodes * 0.5), num_episodes - 1]
 
     q_history, delta_q = run_q_learning(num_episodes, q_table, gamma, learning_rate, checkpoints)
+
+
 
 
