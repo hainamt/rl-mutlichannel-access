@@ -116,18 +116,3 @@ env = [
         Channel(7, ChannelQuality.HIGH),
     ],
 ]
-
-
-def calculate_reward(action: Action, next_channel: Channel):
-    return next_channel.channel_quality.value - energy_consumption_weight * action.type.value
-
-
-def step(timestep: int, action: Action, current_channel: Channel):
-    next_channel = current_channel
-    if action.type != ActionType.STAY:
-        next_channel_index = action.channel_index
-        for channel in env[timestep]:
-            if channel.channel_index == next_channel_index:
-                next_channel = channel
-    reward = calculate_reward(action, next_channel)
-    return next_channel, reward
