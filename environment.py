@@ -119,18 +119,6 @@ env = [
 ]
 
 
-def get_max_Qs(Q, state):
-    return max(list(Q[state].values()))
-
-
-def policy(Q, s, actions, epsilon):
-    random_float = random.random()
-    if random_float <= epsilon:
-        return random.choice(actions)
-    else:
-        return max(actions, key=lambda a: Q[s][a])
-
-
 def calculate_reward(action: Action, next_channel: Channel):
     return next_channel.channel_quality.value - energy_consumption_weight * action.type.value
 
