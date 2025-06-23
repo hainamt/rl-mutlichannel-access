@@ -1,4 +1,5 @@
 from environment import *
+import matplotlib.pyplot as plt
 from q_table import QTable
 from tqdm import tqdm
 import random
@@ -6,17 +7,21 @@ import copy
 
 
 # policy
-def select_action(timestep:int, current_channel_index:int, epsilon:float=0.1):
+def select_action(timestep: int, current_channel_index: int, epsilon: float = 0.1):
     random_float = random.random()
     if random_float <= epsilon:
+        is_random = True
         action = random.choice(q_table.get_all_actions_of_state(timestep, current_channel_index))
     else:
         action = q_table.get_best_action(timestep, current_channel_index)
+        is_random = False
     # print(f"action: {action}")
-    return action
+    return action, is_random
+
 
 def calculate_reward(action: Action, next_channel: Channel):
     return next_channel.channel_quality.value - energy_consumption_weight * action.type.value
+
 
 def step(timestep: int, current_channel: Channel, action: Action):
     next_channel = current_channel
@@ -25,40 +30,46 @@ def step(timestep: int, current_channel: Channel, action: Action):
             next_channel = channel
     return next_channel, calculate_reward(action, next_channel)
 
-def run_q_learning(num_episodes:int,
-                   q_table:QTable,
-                   gamma:float,
-                   initial_epsilon:float,
-                   min_epsilon:float,
-                   epsilon_decay:float,
-                   initial_learning_rate:float,
-                   min_learning_rate:float,
-                   learning_rate_decay:float,
-                   checkpoints:list[int]):
+
+def run_q_learning(num_episodes: int,
+                   q_table: QTable,
+                   gamma: float,
+                   initial_epsilon: float,
+                   min_epsilon: float,
+                   epsilon_decay: float,
+                   initial_learning_rate: float,
+                   min_learning_rate: float,
+                   learning_rate_decay: float,
+                   checkpoints: list[int]):
     q_history = []
     delta_q = dict()
     max_timestep = len(env) - 1
+    episode_rewards = []
 
     for i in tqdm(range(num_episodes)):
+        rewards = 0
         current_channel = Channel(7)
         epsilon = max(min_epsilon, initial_epsilon * (epsilon_decay ** i))
         learning_rate = max(min_learning_rate, initial_learning_rate * (learning_rate_decay ** i))
 
-        for timestep, channels in enumerate(env):
-            chosen_action = select_action(timestep, current_channel.channel_index, epsilon=epsilon)
-            
+        for timestep in range(len(env)):
+            chosen_action, is_random = select_action(timestep, current_channel.channel_index, epsilon=epsilon)
+            if is_random:
+                print(f"Random action selected at timestep {timestep}, episode {i}")
+
             next_channel, reward = step(timestep, current_channel, chosen_action)
+            rewards += reward
 
             old_q = q_table.get_q_value(timestep=timestep,
-                                       channel_index=current_channel.channel_index,
-                                       action=chosen_action)
-            
+                                        channel_index=current_channel.channel_index,
+                                        action=chosen_action)
+
             if timestep == max_timestep:
                 next_state_best_q = 0
             else:
                 next_timestep = timestep + 1
                 next_state_best_q = q_table.get_best_q_value(next_timestep, next_channel.channel_index)
-            
+
             new_q = old_q + learning_rate * (reward + gamma * next_state_best_q - old_q)
             q_table.set_q_value(timestep, current_channel.channel_index, chosen_action, new_q)
 
@@ -67,35 +78,62 @@ def run_q_learning(num_episodes:int,
             delta_q[(timestep, current_channel, chosen_action)].append(abs(new_q - old_q))
             current_channel = next_channel
 
+        episode_rewards.append(rewards)
+
         if i in checkpoints:
             q_history.append(copy.deepcopy(q_table))
 
-    return q_history, delta_q
+    print(f"Latest epsilon: {epsilon}")
+    print(f"Latest learning rate: {learning_rate}")
+
+    return q_history, delta_q, episode_rewards
 
 
 if __name__ == '__main__':
     # state (t, c)
     # action (a)
-    initial_epsilon = 1.0
+    initial_epsilon = 0.5
     min_epsilon = 0.01
-    epsilon_decay = 0.995
+    epsilon_decay = 0.997
 
     initial_learning_rate = 0.1
     min_learning_rate = 0.01
     learning_rate_decay = 0.99
 
     gamma = 0.99
+    num_episodes = 300
+    checkpoints = [int(num_episodes * 0.25), int(num_episodes * 0.5), num_episodes - 1]
+
     time_length = len(env)
     num_channels = len(env[0])
     q_table = QTable(time_length, num_channels)
-    # q_table[(0, Channel(0))] # (timestep: 0, channel: 0)
-    # q_table[(0, 0)] # same as above
 
-    num_episodes = 10000
-    checkpoints = [int(num_episodes * 0.25), int(num_episodes * 0.5), num_episodes - 1]
+    q_history, delta_q, episode_rewards = run_q_learning(num_episodes, q_table,
+                                                         gamma,
+                                                         initial_epsilon, min_epsilon, epsilon_decay,
+                                                         initial_learning_rate, min_learning_rate, learning_rate_decay,
+                                                         checkpoints)
 
-    q_history, delta_q = run_q_learning(num_episodes, q_table,
-                                        gamma,
-                                        initial_epsilon, min_epsilon, epsilon_decay,
-                                        initial_learning_rate, min_learning_rate, learning_rate_decay,
-                                        checkpoints)
+    average_delta_per_episode = []
+    for i in range(num_episodes):
+        episode_deltas = [delta_q[(t, c, a)][i] for (t, c, a) in delta_q.keys() if i < len(delta_q[(t, c, a)])]
+        if episode_deltas:
+            average_delta_per_episode.append(sum(episode_deltas) / len(episode_deltas))
+        else:
+            average_delta_per_episode.append(0)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(average_delta_per_episode)
+    plt.title('Average Change in Q-Values per Episode')
+    plt.xlabel('Episode')
+    plt.ylabel('Average ΔQ')
+    plt.grid(True)
+
+    # Plot the rewards
+    plt.figure(figsize=(10, 6))
+    plt.plot(episode_rewards)
+    plt.title('Total Reward per Episode')
+    plt.xlabel('Episode')
+    plt.ylabel('Total Reward')
+    plt.grid(True)
+    plt.show()
