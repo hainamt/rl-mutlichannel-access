@@ -1,12 +1,12 @@
 from itertools import product
-from environment import *
 import random
+from environment import Channel, Action, ActionType
 
 class QTable(dict):
-    def __init__(self, time_length, num_channels):
+    def __init__(self, num_timestep, num_channels):
 
         super().__init__()
-        self.time_length = time_length
+        self.num_timestep = num_timestep
         self.num_channels = num_channels
         self.channel_objects = [Channel(channel_index=i) for i in range(num_channels)]
         self.channel_map = {ch.channel_index: ch for ch in self.channel_objects}
@@ -14,7 +14,7 @@ class QTable(dict):
         self._initialize_q_table()
 
     def _initialize_q_table(self):
-        timesteps = list(range(self.time_length))
+        timesteps = list(range(self.num_timestep))
         states = list(product(timesteps, self.channel_objects))
 
         for state in states:
@@ -30,7 +30,7 @@ class QTable(dict):
         if isinstance(key, tuple) and len(key) == 2:
             t, c = key
             if isinstance(c, int) and c in self.channel_map:
-                return t, self.channel_map[c]  # Make sure to return a tuple, not a list
+                return t, self.channel_map[c]
         return key
 
     def __getitem__(self, key):
@@ -62,3 +62,13 @@ class QTable(dict):
 
     def get_best_q_value(self, timestep, channel_index):
         return max(self[timestep, channel_index].values())
+
+    def get_best_route(self, start_channel_index=0):
+        route = []
+        current_channel_index = start_channel_index
+
+        for timestep in range(self.num_timestep):
+            best_action = self.get_best_action(timestep, current_channel_index)
+            route.append((timestep, current_channel_index, best_action))
+            current_channel_index = best_action.channel_index
+        return route

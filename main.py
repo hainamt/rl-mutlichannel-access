@@ -25,9 +25,11 @@ def calculate_reward(action: Action, next_channel: Channel):
 
 def step(timestep: int, current_channel: Channel, action: Action):
     next_channel = current_channel
-    for channel in env[timestep]:
-        if channel.channel_index == action.channel_index:
-            next_channel = channel
+    next_timestep = timestep + 1
+    if next_timestep < len(env):  # Check if not at the end
+        for channel in env[next_timestep]:
+            if channel.channel_index == action.channel_index:
+                next_channel = channel
     return next_channel, calculate_reward(action, next_channel)
 
 
@@ -101,7 +103,7 @@ if __name__ == '__main__':
     learning_rate_decay = 0.99
 
     gamma = 0.99
-    num_episodes = 300
+    num_episodes = 10000
     checkpoints = [int(num_episodes * 0.25), int(num_episodes * 0.5), num_episodes - 1]
 
     time_length = len(env)
@@ -113,27 +115,35 @@ if __name__ == '__main__':
                                                          initial_epsilon, min_epsilon, epsilon_decay,
                                                          initial_learning_rate, min_learning_rate, learning_rate_decay,
                                                          checkpoints)
-
-    average_delta_per_episode = []
-    for i in range(num_episodes):
-        episode_deltas = [delta_q[(t, c, a)][i] for (t, c, a) in delta_q.keys() if i < len(delta_q[(t, c, a)])]
-        if episode_deltas:
-            average_delta_per_episode.append(sum(episode_deltas) / len(episode_deltas))
+    best_combo = q_table.get_best_route(7)
+    for timestep, current_channel, best_action in best_combo:
+        print(f"Timestep: {timestep}, Current channel: {current_channel}")
+        if best_action.type == ActionType.SWITCH:
+            print(f"Switch to channel {best_action.channel_index}")
         else:
-            average_delta_per_episode.append(0)
+            print(f"Stay in channel {current_channel}")
+    # print(f"Best route: {q_table.get_best_route(7)}")
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(average_delta_per_episode)
-    plt.title('Average Change in Q-Values per Episode')
-    plt.xlabel('Episode')
-    plt.ylabel('Average ΔQ')
-    plt.grid(True)
-
-    # Plot the rewards
-    plt.figure(figsize=(10, 6))
-    plt.plot(episode_rewards)
-    plt.title('Total Reward per Episode')
-    plt.xlabel('Episode')
-    plt.ylabel('Total Reward')
-    plt.grid(True)
-    plt.show()
+    # average_delta_per_episode = []
+    # for i in range(num_episodes):
+    #     episode_deltas = [delta_q[(t, c, a)][i] for (t, c, a) in delta_q.keys() if i < len(delta_q[(t, c, a)])]
+    #     if episode_deltas:
+    #         average_delta_per_episode.append(sum(episode_deltas) / len(episode_deltas))
+    #     else:
+    #         average_delta_per_episode.append(0)
+    #
+    # plt.figure(figsize=(10, 6))
+    # plt.plot(average_delta_per_episode)
+    # plt.title('Average Change in Q-Values per Episode')
+    # plt.xlabel('Episode')
+    # plt.ylabel('Average ΔQ')
+    # plt.grid(True)
+    #
+    # # Plot the rewards
+    # plt.figure(figsize=(10, 6))
+    # plt.plot(episode_rewards)
+    # plt.title('Total Reward per Episode')
+    # plt.xlabel('Episode')
+    # plt.ylabel('Total Reward')
+    # plt.grid(True)
+    # plt.show()
