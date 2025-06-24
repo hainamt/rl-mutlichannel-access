@@ -23,7 +23,7 @@ class Action(NamedTuple):
     channel_index: int
 
 
-energy_consumption_weight = 0.25
+energy_consumption_weight = 1
 env = [
     [
         Channel(0, ChannelQuality.MEDIUM),
