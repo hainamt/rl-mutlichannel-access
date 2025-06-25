@@ -193,7 +193,7 @@ class QLearnAgent:
         
         return ax
 
-    def draw_all(self, start_channel_index: int):
+    def draw(self, start_channel_index: int):
         fig = plt.figure(figsize=(16, 12))
         gs = plt.GridSpec(2, 2, figure=fig)
 
