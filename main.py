@@ -11,7 +11,7 @@ if __name__ == '__main__':
     learning_rate_decay = 0.99
 
     gamma = 0.99
-    num_episodes = 1000
+    num_episodes = 5000
     checkpoints = [int(num_episodes * 0.25), int(num_episodes * 0.5), num_episodes - 1]
 
     q_agent = QLearnAgent(env, episode_length=num_episodes, power_consumption_weight=1)
