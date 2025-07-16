@@ -7,11 +7,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
+
 class QLearnAgent:
 
     def __init__(self, envi, 
                  episode_length=10000,
-                 power_consumption_weight=0.5):
+                 power_consumption_weight=0.5,
+                 seed=404):
         self.max_reward_episode = None
         self.max_reward = None
         self.max_reward_route = None
@@ -25,12 +27,15 @@ class QLearnAgent:
         self.episode_rewards = []
         self.episode_length = episode_length
 
+        random.seed(seed)
+
+    # policy (deterministic policy)
     def select_action(self, timestep, current_channel_index, epsilon=0.1):
         random_float = random.random()
-        if random_float <= epsilon:
+        if random_float <= epsilon: # probability of choosing a random action
             is_random = True
             action = random.choice(self.q_table.get_all_actions_of_state(timestep, current_channel_index))
-        else:
+        else: # 1 - epsilon
             action = self.q_table.get_best_action(timestep, current_channel_index)
             is_random = False
         # print(f"action: {action}")
@@ -39,7 +44,9 @@ class QLearnAgent:
     def calculate_reward(self, action: Action, next_channel: Channel):
         return next_channel.channel_quality.value - self.power_consumption_weight * action.type.value
 
-    def step(self, timestep: int, current_channel: Channel, action: Action):
+    def step(self, timestep: int,
+             current_channel: Channel,
+             action: Action):
         next_channel = current_channel
         next_timestep = timestep + 1
         if next_timestep < len(env):
@@ -47,6 +54,16 @@ class QLearnAgent:
                 if channel.channel_index == action.channel_index:
                     next_channel = channel
         return next_channel, self.calculate_reward(action, next_channel)
+
+    def walk(self, start_channel_index=7):
+        route = []
+        current_channel_index = start_channel_index
+
+        for timestep in range(self.q_table.num_timestep):
+            action, _ = self.select_action(timestep, current_channel_index, epsilon=0)
+            route.append((timestep, current_channel_index, action))
+            current_channel_index = action.channel_index
+        return route
 
     def train(self, gamma: float,
                initial_epsilon: float,
@@ -104,7 +121,7 @@ class QLearnAgent:
                 max_reward = rewards
                 max_reward_route = episode_route.copy()
                 max_reward_episode = i
-                print(f"New max reward: {max_reward} in episode {i}")
+                # print(f"New max reward: {max_reward} in episode {i}")
 
             if i in checkpoints:
                 self.q_history.append(copy.deepcopy(self.q_table))
@@ -158,7 +175,7 @@ class QLearnAgent:
 
         ax.set_xlabel('t')
         ax.set_ylabel('Channel index')
-        ax.set_title("Best Route")
+        ax.set_title("Last Version Route")
 
         ax.invert_yaxis()
         ax.set_aspect('equal')

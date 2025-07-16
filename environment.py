@@ -24,7 +24,7 @@ class Action(NamedTuple):
 
 
 energy_consumption_weight = 1
-env = [
+env = [ # deterministic environment
     [
         Channel(0, ChannelQuality.MEDIUM),
         Channel(1, ChannelQuality.MEDIUM),
@@ -34,7 +34,7 @@ env = [
         Channel(5, ChannelQuality.MEDIUM),
         Channel(6, ChannelQuality.MEDIUM),
         Channel(7, ChannelQuality.MEDIUM),
-    ],
+    ], # t = 0
     [
         Channel(0, ChannelQuality.MEDIUM),
         Channel(1, ChannelQuality.HIGH),
@@ -44,7 +44,7 @@ env = [
         Channel(5, ChannelQuality.MEDIUM),
         Channel(6, ChannelQuality.MEDIUM),
         Channel(7, ChannelQuality.BAD),
-    ],
+    ], # t = 1
     [
         Channel(0, ChannelQuality.BAD),
         Channel(1, ChannelQuality.MEDIUM),
@@ -114,5 +114,5 @@ env = [
         Channel(5, ChannelQuality.BAD),
         Channel(6, ChannelQuality.MEDIUM),
         Channel(7, ChannelQuality.HIGH),
-    ],
+    ], # t = 8
 ]

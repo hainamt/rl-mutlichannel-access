@@ -54,7 +54,7 @@ class QTable(dict):
     def get_q_value(self, timestep, channel_index, action):
         return self[timestep, channel_index][action]
 
-    def get_best_action(self, timestep, channel_index):
+    def get_best_action(self, timestep, channel_index): # (t, c)
         state_actions = self[timestep, channel_index]
         max_value = max(state_actions.values())
         best_actions = [action for action, value in state_actions.items() if value == max_value]
@@ -72,3 +72,48 @@ class QTable(dict):
             route.append((timestep, current_channel_index, best_action))
             current_channel_index = best_action.channel_index
         return route
+    
+    
+    def to_polars_dataframe(self):
+        import polars as pl
+
+        all_actions = set()
+        for state_actions in self.values():
+            all_actions.update(state_actions.keys())
+        
+        sorted_actions = sorted(all_actions, key=lambda a: (a.type.value, a.channel_index))
+        action_columns = [f"{a.type.name}_{a.channel_index}" for a in sorted_actions]
+
+        data_dict = {}
+        
+        for state, actions_dict in self.items():
+            timestep, channel = state
+            channel_index = channel.channel_index
+            
+            if timestep not in data_dict:
+                data_dict[timestep] = {}
+            
+            if channel_index not in data_dict[timestep]:
+                data_dict[timestep][channel_index] = {}
+            
+            for action, q_value in actions_dict.items():
+                action_str = f"{action.type.name}_{action.channel_index}"
+                data_dict[timestep][channel_index][action_str] = q_value
+        
+        records = []
+        for timestep in sorted(data_dict.keys()):
+            for channel_index in sorted(data_dict[timestep].keys()):
+                row = {"timestep": timestep, "channel_index": channel_index}
+                # Add each action's Q-value, using 0.0 as default if the action isn't available
+                for action_col in action_columns:
+                    row[action_col] = data_dict[timestep][channel_index].get(action_col, 0.0)
+                records.append(row)
+        
+        if not records:
+            schema = {"timestep": pl.Int32, "channel_index": pl.Int32}
+            schema.update({col: pl.Float64 for col in action_columns})
+            return pl.DataFrame(schema=schema)
+        
+        df = pl.DataFrame(records)
+
+        return df
